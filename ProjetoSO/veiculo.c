@@ -1,7 +1,7 @@
 #include "taxi.h"
 #include <errno.h>
 
-char pipe_um[50];
+char pipe_um[50]; //variavel para guardar o id do taxi 
 
 void trata_cancel(int s){
   (void)s;
@@ -11,8 +11,8 @@ void trata_cancel(int s){
 }
 
 int main(int argc,char *argv[]){
-  setbuf(stdout,NULL);
-  signal(SIGUSR1,trata_cancel);
+  setbuf(stdout,NULL); //desliga o buffer do printf
+  signal(SIGUSR1,trata_cancel); //ativa o botao panmico
   if(argc<6){
     printf("(V) Erro: Faltam argumentos.\n");
     return 1;
@@ -28,22 +28,22 @@ int main(int argc,char *argv[]){
   char pipe_cli[50];
   char comando_rec[100];
   
-  sprintf(pipe_um,PIPE_VEICULO,veiculo_id);
-  if(mkfifo(pipe_um,0666)==-1 && errno!=EEXIST){
+  sprintf(pipe_um,PIPE_VEICULO,veiculo_id); //constroi o nome do pipe : pipe_taxi_1
+  if(mkfifo(pipe_um,0666)==-1 && errno!=EEXIST){ //cria ficheiro no disco
     perror("mkfifo veiculo");
   }
   
   printf("(Taxi %d) a dirigir-se para %s \n",veiculo_id,origem);
-  sleep(5);
+  sleep(5);//demora 5 seg a chegar ao cliente
   
-  sprintf(pipe_cli,PIPE_CLIENTE,pid_cliente);
-  int fd_cli=open(pipe_cli,O_WRONLY);
+  sprintf(pipe_cli,PIPE_CLIENTE,pid_cliente); // constroi o nome do pipe cliente com o id do cliente : pipe_cliente_1234
+  int fd_cli=open(pipe_cli,O_WRONLY); //abre a porta pa falar c cliente
   if(fd_cli!=-1){
     char msg[100];
     sprintf(msg,"Taxi %d chegou.",veiculo_id);
-    write(fd_cli,msg,strlen(msg)+1);
+    write(fd_cli,msg,strlen(msg)+1); //manda msg para o cliente 
     close(fd_cli);
-    kill(pid_cliente,SIGUSR2);
+    kill(pid_cliente,SIGUSR2); //acorda o cliente
   }else{
     printf("Taxi %d - Cliente Desapareceu\n",veiculo_id);
     unlink(pipe_um);
@@ -51,7 +51,7 @@ int main(int argc,char *argv[]){
   }
   
   printf("Taxi %d - A espera que o cliente entre\n",veiculo_id);
-  int fd_um = open(pipe_um,O_RDONLY);
+  int fd_um = open(pipe_um,O_RDONLY); //sem nonblock para ele ficar a espera que ele entre 
   if(fd_um==-1){
     perror("Erro pipe veiculo");
     unlink(pipe_um);
@@ -73,15 +73,15 @@ int main(int argc,char *argv[]){
     return 0;
   }
   
-  close(fd_um);
-  fd_um = open(pipe_um,O_RDONLY | O_NONBLOCK);
+  close(fd_um); //fecha o pipe
+  fd_um = open(pipe_um,O_RDONLY | O_NONBLOCK); //abre outro c nonblock pq vamos precisar que o cliente fale
   int passo=distancia/10;
   if(passo<1) passo=1;
 
   for(int k=passo;k<=distancia;k+=passo){
     sleep(1);
-    memset(comando_rec,0,sizeof(comando_rec));
-    if(read(fd_um,comando_rec,sizeof(comando_rec))>0){
+    memset(comando_rec,0,sizeof(comando_rec)); //tenta ler algum comando do cliente 
+    if(read(fd_um,comando_rec,sizeof(comando_rec))>0){ //como esta nonblock ele prossegue se nao houver nada 
       if(strncmp(comando_rec,"sair",4)==0){
         printf("Taxi %d - Cliente parou a viagem! \n",veiculo_id);
         printf("concluido (interrompido)\n");
